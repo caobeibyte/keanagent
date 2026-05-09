@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <title>类 ChatGPT 记忆型对话系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 30px auto;
+            background: #f7f7f8;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .chat-box {
+            height: 420px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .msg {
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+            line-height: 1.4;
+        }
+        .user {
+            background: #d1e7ff;
+            margin-left: auto;
+            text-align: right;
+        }
+        .ai {
+            background: #e9e9eb;
+        }
+        .input-area {
+            margin-top: 10px;
+            display: flex;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        button {
+            margin-left: 8px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .memory {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🧠 类 ChatGPT 记忆型对话系统</h2>
+
+    <div class="chat-box" id="chatBox"></div>
+
+    <div class="input-area">
+        <input id="input" placeholder="和AI聊点什么..." />
+        <button onclick="sendMsg()">发送</button>
+        <button onclick="clearChat()">清空</button>
+    </div>
+
+    <div class="memory" id="memoryView"></div>
+</div>
+
+<script>
+// ====== AI人格设定 ======
+const persona = {
+    name: "小智",
+    role: "一个聪明、温和、略带幽默感的AI助手",
+    style: "回答简洁但有洞察力，会记住用户信息"
+};
+
+// ====== 长期记忆 ======
+let memory = JSON.parse(localStorage.getItem('ai_memory') || '{}');
+let chatHistory = JSON.parse(localStorage.getItem('chat_history') || '[]');
+
+// ====== 初始化 ======
+renderChat();
+renderMemory();
+
+function saveAll() {
+    localStorage.setItem('ai_memory', JSON.stringify(memory));
+    localStorage.setItem('chat_history', JSON.stringify(chatHistory));
+}
+
+function sendMsg() {
+    const input = document.getElementById('input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // 用户消息
+    addMsg('user', text);
+    chatHistory.push({role: 'user', text});
+
+    // 记忆提取（非常简单版）
+    updateMemory(text);
+
+    // AI回复
+    const reply = generateReply(text);
+    setTimeout(() => {
+        addMsg('ai', reply);
+        chatHistory.push({role: 'ai', text: reply});
+        saveAll();
+        renderMemory();
+    }, 300);
+
+    input.value = '';
+}
+
+function addMsg(role, text) {
+    const box = document.getElementById('chatBox');
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.textContent = (role === 'ai' ? persona.name + '：' : '你：') + text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+// ====== 非智能记忆系统（模拟长期记忆）======
+function updateMemory(text) {
+    if (text.includes("我叫")) {
+        const name = text.replace("我叫", "").trim();
+        memory.name = name;
+    }
+    if (text.includes("我喜欢")) {
+        memory.like = text.replace("我喜欢", "").trim();
+    }
+    if (text.includes("我在")) {
+        memory.location = text.replace("我在", "").trim();
+    }
+}
+
+function generateReply(text) {
+    let base = "我明白了。";
+
+    // 个性化记忆调用
+    if (memory.name) {
+        base = memory.name + "，" + base;
+    }
+
+    if (text.includes("我是谁")) {
+        return memory.name ? `你是${memory.name}，我记得你。` : "我还不知道你是谁。";
+    }
+
+    if (text.includes("你记得我吗")) {
+        return memory.name ? `当然，你是${memory.name}，我还记得你喜欢${memory.like || '一些事情'}。` : "我还没有关于你的记忆。";
+    }
+
+    if (memory.like && text.includes("喜欢")) {
+        return `你之前说过你喜欢${memory.like}，对吧？`; 
+    }
+
+    return base + "（我是" + persona.name + "）";
+}
+
+function renderChat() {
+    const box = document.getElementById('chatBox');
+    box.innerHTML = '';
+    chatHistory.forEach(m => addMsg(m.role, m.text));
+}
+
+function renderMemory() {
+    const view = document.getElementById('memoryView');
+    view.innerHTML = "🧠 记忆状态：" + JSON.stringify(memory, null, 2);
+}
+
+function clearChat() {
+    chatHistory = [];
+    localStorage.removeItem('chat_history');
+    document.getElementById('chatBox').innerHTML = '';
+}
+</script>
+
+</body>
+</html>
